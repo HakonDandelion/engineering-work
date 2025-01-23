@@ -23,5 +23,8 @@
     "postcss": "^8",
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.1"
+  },
+  "scripts": {
+  "postinstall": "prisma generate"
   }
 }
