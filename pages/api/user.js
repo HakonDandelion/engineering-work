@@ -10,13 +10,15 @@ if(validator.isEmail(email)){
     await prisma.user.create({data: {email}})
     return res.status(200).json({ success: "Pomyślnie!" })
   }catch (error){
-    console.log(error.meta.target === "User_email_key")
-    return res.status(400).json({ error: "Jesteś już zarejestrowany!" })
+    console.log(error.meta.target)
+    if(error.meta.target === "User_email_key"){
+      return res.status(400).json({ error: "Jesteś już zarejestrowany!" })
+    }
   }
-
-}else{
-  return res.status(400).json({ error: "Nieprawidłowy adres email!" })
-}}
+  }else{
+    return res.status(400).json({ error: "Nieprawidłowy adres email!" })
+  }
+}
 
 export default async function handler(req, res) {
   switch(req.method){
