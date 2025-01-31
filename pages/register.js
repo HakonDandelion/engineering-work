@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/router";
 import Header from "@/components/Header";
+import {  useSession } from "next-auth/react";
 
 export default function Register() {
   const router = useRouter();
+  const [errors, setErrors] = useState({});
+  const { data: session } = useSession();
+  const [serverError, setServerError] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -11,9 +15,11 @@ export default function Register() {
     confirmPassword: "",
   });
 
-  const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
-
+  useEffect(() => {
+    if (session) {
+      router.push('/browse-reports');
+    }
+  }, [session, router]);
 
   const validateUsername = () => {
     const trimmedUsername = formData.username.trim();

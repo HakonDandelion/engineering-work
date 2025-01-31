@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import Header from "@/components/Header";
+import { getSession } from "next-auth/react";
 import { useState } from "react";
 
 export default function CreateSheet() {
@@ -163,4 +164,20 @@ export default function CreateSheet() {
      </main>
    </div>
  );
+}
+export async function getServerSideProps(context) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session }
+  };
 }

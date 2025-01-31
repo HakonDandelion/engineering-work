@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Nav from "@/components/Nav";
+import { useSession, getSession } from "next-auth/react";
 
 export default function Dashboard() {
-  const [username, setUsername] = useState("");
 
-  // W przyszłości można dodać pobieranie danych użytkownika z API/sesji
-  useEffect(() => {
-    // Tymczasowo hardcodowane dla przykładu
-    setUsername("Jan Kowalski");
-  }, []);
+  const { data: session } = useSession();
 
   return (
     <div>
@@ -21,7 +17,7 @@ export default function Dashboard() {
           {/* Sekcja powitalna */}
           <div className="bg-black/20 backdrop-blur-sm p-8 rounded-lg mb-8">
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-700">
-              Witaj, {username}! 👋
+            Witaj, {session?.user?.name || 'Użytkowniku'}! 👋
             </h1>
             <p className="text-white mt-2">
               Sprawdź swoje ostatnie raporty i statystyki
@@ -80,4 +76,20 @@ export default function Dashboard() {
       </main>
     </div>
   );
+}
+export async function getServerSideProps(context) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session }
+  };
 }

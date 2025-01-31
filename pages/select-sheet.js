@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import Header from "@/components/Header";
 import { useState } from "react";
+import { getSession } from "next-auth/react";
 
 export default function SelectSheet() {
   // Stan do śledzenia wybranego formularza
@@ -91,4 +92,20 @@ export default function SelectSheet() {
       </main>
     </div>
   );
+}
+export async function getServerSideProps(context) {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { session }
+  };
 }

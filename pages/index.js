@@ -1,14 +1,23 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
+import { signIn, useSession } from "next-auth/react";
 
 
 export default function Home() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  
+  useEffect(() => {
+    if (session) {
+      router.push("/browse-reports");
+    }
+  }, [session, router]);
 
   useEffect(() => {
     if (router.query.success) {
@@ -35,32 +44,23 @@ export default function Home() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setGeneralError(""); // Resetujemy ogólny błąd
-    setErrors({}); // Resetujemy błędy
-  
+    setGeneralError("");
+    setErrors({});
+
     if (!validateForm()) return;
-  
+
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      const result = await signIn("credentials", {
+        username: formData.username,
+        password: formData.password,
+        redirect: false,
       });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        router.push("/start");
-      } else {
-        // Sprawdzamy czy to błąd autoryzacji
-        if (response.status === 401) {
-          setGeneralError("Nieprawidłowa nazwa użytkownika lub hasło.");
-        } else {
-          setGeneralError(data.error || "Wystąpił błąd podczas logowania.");
-        }
+
+      if (result.error) {
+        setGeneralError("Nieprawidłowa nazwa użytkownika lub hasło.");
       }
     } catch (error) {
-      console.error("Błąd sieci:", error);
+      console.error("Błąd logowania:", error);
       setGeneralError("Wystąpił problem z połączeniem. Spróbuj ponownie później.");
     }
   };
