@@ -3,8 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoClient } from "mongodb";
 import bcrypt from "bcryptjs";
 
-const uri = process.env.DATABASE_URL;
-
 export default NextAuth({
   providers: [
     CredentialsProvider({
@@ -55,21 +53,23 @@ export default NextAuth({
   },
   pages: {
     signIn: "/",
-    error: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
+        session.user.name = token.name;
       }
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 });
