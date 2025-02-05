@@ -9,7 +9,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Nie jesteś zalogowany" });
   }
 
+  // Dodaj obsługę OPTIONS dla CORS
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Allow', 'PUT');
+    return res.status(200).end();
+  }
+
   if (req.method !== 'PUT') {
+    res.setHeader('Allow', 'PUT');
     return res.status(405).json({ error: "Metoda nie jest dozwolona" });
   }
 
@@ -21,6 +28,7 @@ export default async function handler(req, res) {
 
     const formId = req.query.id;
     const { _id, ...updateData } = req.body;
+
     const result = await collection.updateOne(
       {
         _id: new ObjectId(formId),
