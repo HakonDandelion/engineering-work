@@ -5,7 +5,6 @@ import { useSession, getSession } from 'next-auth/react';
 import Header from "@/components/Header";
 import Nav from "@/components/Nav";
 import { MongoClient, ObjectId } from 'mongodb';
-import { authOptions } from "/pages/api/auth/[...nextauth]";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
