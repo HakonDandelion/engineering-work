@@ -120,7 +120,7 @@ export default function Home() {
               Zaloguj się
             </button>
 
-            <div className="min-h-[60px] mt-4"> {/* Stała przestrzeń na generalny błąd */}
+            <div className="min-h-[60px] mt-4"> 
               {generalError && (
                 <div className="p-3 text-red-800 bg-red-100 border border-red-400 rounded text-center">
                   {generalError}
