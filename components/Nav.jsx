@@ -15,7 +15,7 @@ export default function Nav(){
        <div className="bg-black/20 backdrop-blur-sm">
            <nav className="grid grid-cols-2 sm:flex justify-between items-center text-white max-w-screen-xl mx-auto">
                <a href="/start" className="hover:bg-fuchsia-600/20 min-h-[3rem] px-4 inline-flex items-center justify-self-start">
-                   Start
+                   Test
                </a>
 
                <input
