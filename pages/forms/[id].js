@@ -25,12 +25,13 @@ export default function FormDetails({ formData: initialFormData }) {
 
   const handleSave = async () => {
     try {
+      const { _id, ...updateData } = formData; // Remove _id from data being sent
       const response = await fetch(`/api/forms/${formData._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updateData),
       });
 
       if (response.ok) {

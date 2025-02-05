@@ -20,12 +20,11 @@ export default async function handler(req, res) {
     const collection = database.collection("forms");
 
     const formId = req.query.id;
-    const updateData = req.body;
-
+    const { _id, ...updateData } = req.body;
     const result = await collection.updateOne(
-      { 
+      {
         _id: new ObjectId(formId),
-        userId: session.user.id 
+        userId: session.user.id
       },
       { $set: updateData }
     );
