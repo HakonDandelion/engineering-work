@@ -1,19 +1,68 @@
+// pages/select-sheet.js
 import Nav from "@/components/Nav";
 import Header from "@/components/Header";
-import { useState } from "react";
-import { getSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { getSession, useSession } from "next-auth/react";
+import { useRouter } from 'next/router';
 
 export default function SelectSheet() {
-  // Stan do śledzenia wybranego formularza
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(true);
   const [selectedSheet, setSelectedSheet] = useState(null);
+  const [templates, setTemplates] = useState([]);
   
-  // Przykładowe dane formularzy
-  const sheets = [
-    { id: 1, name: "Formularz podstawowy", description: "Podstawowe dane i informacje", fields: 5 },
-    { id: 2, name: "Raport finansowy", description: "Szczegółowe dane finansowe", fields: 12 },
-    { id: 3, name: "Analiza projektu", description: "Ocena postępu projektu", fields: 8 },
-    { id: 4, name: "Ankieta klienta", description: "Badanie satysfakcji klienta", fields: 10 }
+  // Wbudowane szablony
+  const builtInTemplates = [
+    { 
+      id: "vehicle-appraisal", 
+      name: "Formularz wyceny pojazdu", 
+      description: "Szczegółowa wycena pojazdów mechanicznych", 
+      fields: 15,
+      path: "/forms/vehicle-appraisal",
+      type: "built-in"
+    }
   ];
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/form-templates');
+        if (response.ok) {
+          const customTemplates = await response.json();
+          // Połącz wbudowane szablony z niestandardowymi
+          setTemplates([
+            ...builtInTemplates,
+            ...customTemplates.map(template => ({
+              ...template,
+              type: 'custom',
+              path: `/forms/custom/${template._id}`
+            }))
+          ]);
+        }
+      } catch (error) {
+        console.error('Błąd podczas pobierania szablonów:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
+  // Funkcja obsługująca przejście do wybranego formularza
+  const handleFormSelection = () => {
+    if (!selectedSheet) return;
+    
+    const selectedTemplate = templates.find(template => template.id === selectedSheet);
+    if (selectedTemplate) {
+      router.push(selectedTemplate.path);
+    }
+  };
+
+  const handleCreateTemplate = () => {
+    router.push('/create-template');
+  };
 
   return (
     <div>
@@ -23,76 +72,95 @@ export default function SelectSheet() {
       <main>
         <div className="max-w-6xl mx-auto mt-4 p-8">
           <div className="bg-black/20 backdrop-blur-sm p-12 rounded-lg">
-            <h1 className="mb-6 text-6xl bg-clip-text text-transparent font-bold bg-gradient-to-r from-pink-500 to-violet-700">
-              Select sheet
-            </h1>
-
-            <div className="text-white mb-8">
-              <p className="text-xl mb-4">
-                Wybierz formularz, który chcesz wypełnić
-              </p>
-            </div>
-
-            {/* Grid formularzy */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {sheets.map((sheet) => (
-                <div
-                  key={sheet.id}
-                  className={`p-6 rounded-lg cursor-pointer transition-all ${
-                    selectedSheet === sheet.id
-                      ? "bg-violet-900/50 border-2 border-violet-500"
-                      : "bg-black/30 hover:bg-black/40 border-2 border-transparent"
-                  }`}
-                  onClick={() => setSelectedSheet(sheet.id)}
-                >
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    {sheet.name}
-                  </h3>
-                  <p className="text-gray-300 mb-4">
-                    {sheet.description}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">
-                      Liczba pól: {sheet.fields}
-                    </span>
-                    <span className="text-blue-400">
-                      {selectedSheet === sheet.id ? "Wybrano ✓" : "Wybierz →"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Przycisk potwierdzenia */}
-            <div className="flex justify-center">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-6xl bg-clip-text text-transparent font-bold bg-gradient-to-r from-pink-500 to-violet-700">
+                Wybierz formularz
+              </h1>
               <button
-                className={`px-8 py-3 rounded-lg text-lg font-semibold transition-all ${
-                  selectedSheet
-                    ? "bg-gradient-to-r from-pink-500 to-violet-700 text-white hover:opacity-90"
-                    : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                }`}
-                disabled={!selectedSheet}
+                onClick={handleCreateTemplate}
+                className="px-6 py-3 bg-gradient-to-r from-pink-500 to-violet-700 text-white rounded-lg hover:opacity-90"
               >
-                Przejdź do formularza
+                + Nowy szablon
               </button>
             </div>
 
-            {/* Dodatkowe informacje */}
-            <div className="mt-8 text-gray-400 text-sm">
-              <h4 className="font-semibold mb-2">Wskazówki:</h4>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Wybierz formularz odpowiedni do Twoich potrzeb</li>
-                <li>Sprawdź dokładnie opis i liczbę wymaganych pól</li>
-                <li>Po wybraniu formularza kliknij przycisk, aby przejść dalej</li>
-                <li>W razie wątpliwości skontaktuj się z pomocą techniczną</li>
-              </ul>
-            </div>
+            {loading ? (
+              <div className="text-center text-white py-8">
+                Ładowanie szablonów...
+              </div>
+            ) : (
+              <>
+                <div className="text-white mb-8">
+                  <p className="text-xl mb-4">
+                    Wybierz formularz, który chcesz wypełnić
+                  </p>
+                </div>
+
+                {/* Grid formularzy */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {templates.map((template) => (
+                    <div
+                      key={template.id || template._id}
+                      className={`p-6 rounded-lg cursor-pointer transition-all ${
+                        selectedSheet === (template.id || template._id)
+                          ? "bg-violet-900/50 border-2 border-violet-500"
+                          : "bg-black/30 hover:bg-black/40 border-2 border-transparent"
+                      }`}
+                      onClick={() => setSelectedSheet(template.id || template._id)}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xl font-semibold text-white">
+                          {template.name}
+                        </h3>
+                        {template.type === 'custom' && (
+                          <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-300 rounded">
+                            Niestandardowy
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-300 mb-4">
+                        {template.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">
+                          Liczba pól: {template.fields?.length || template.fields || 0}
+                        </span>
+                        <span className="text-blue-400">
+                          {selectedSheet === (template.id || template._id) ? "Wybrano ✓" : "Wybierz →"}
+                        </span>
+                      </div>
+                      {template.isPublic && (
+                        <div className="mt-2 text-sm text-gray-400">
+                          ⚡ Szablon publiczny
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Przycisk potwierdzenia */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleFormSelection}
+                    className={`px-8 py-3 rounded-lg text-lg font-semibold transition-all ${
+                      selectedSheet
+                        ? "bg-gradient-to-r from-pink-500 to-violet-700 text-white hover:opacity-90"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={!selectedSheet}
+                  >
+                    Przejdź do formularza
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
     </div>
   );
 }
+
 export async function getServerSideProps(context) {
   const session = await getSession(context);
 
