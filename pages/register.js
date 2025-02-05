@@ -26,7 +26,7 @@ export default function Register() {
     const usernameRegex = /^[a-zA-Z0-9_-]+$/;
 
     if (trimmedUsername.length < 4) {
-      setErrors((prev) => ({ ...prev, username: "Nazwa użytkownika musi mieć co najmniej 4 znaki!" }));
+      setErrors((prev) => ({ ...prev, username: "Nazwa użytkownika musi mieć co najmniej 4 znaki!!" }));
     } else if (trimmedUsername.length > 22) {
       setErrors((prev) => ({ ...prev, username: "Nazwa użytkownika może mieć maksymalnie 22 znaki!" }));
     } else if (!usernameRegex.test(trimmedUsername)) {
