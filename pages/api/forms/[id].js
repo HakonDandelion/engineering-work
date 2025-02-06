@@ -17,6 +17,7 @@ export default async function handler(req, res) {
           useUnifiedTopology: true,
           maxPoolSize: 10
         });
+        await client.connect();
       }
       
       await client.connect();
