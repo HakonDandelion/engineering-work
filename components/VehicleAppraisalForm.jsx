@@ -87,6 +87,36 @@ const VehicleAppraisalForm = () => {
       });
     }
   };
+  const handleUpdate = async (formId) => {
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`/api/forms/${formId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          status: 'updated'
+        }),
+      });
+  
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Błąd podczas aktualizacji formularza');
+      }
+  
+      router.push('/browse-reports?success=form-updated');
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        submit: error.message
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,28 +124,32 @@ const VehicleAppraisalForm = () => {
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSubmitting(true);
-
+    const formId = router.query.id;
+  
     try {
-      const response = await fetch("/api/forms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          userId: session.user.id,
-          type: "vehicle-appraisal",
-          status: "submitted"
-        }),
-      });
-
+      const response = await fetch(
+        formId ? `/api/forms/${formId}` : "/api/forms", 
+        {
+          method: formId ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...formData,
+            userId: session.user.id,
+            type: "vehicle-appraisal",
+            status: formId ? "updated" : "submitted"
+          }),
+        }
+      );
+  
       if (response.ok) {
-        router.push("/browse-reports?success=form-submitted");
+        router.push("/browse-reports?success=" + (formId ? "form-updated" : "form-submitted"));
       } else {
         const data = await response.json();
-        throw new Error(data.error || "Błąd podczas zapisywania formularza");
+        throw new Error(data.error || "Błąd podczas " + (formId ? "aktualizacji" : "zapisywania") + " formularza");
       }
     } catch (error) {
       setErrors(prev => ({
