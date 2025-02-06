@@ -1,3 +1,7 @@
+import { MongoClient, ObjectId } from 'mongodb';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+
 export default async function handler(req, res) {
   res.setHeader('Allow', ['GET', 'PUT', 'DELETE', 'OPTIONS']);
   
