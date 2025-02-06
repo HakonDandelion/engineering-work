@@ -12,6 +12,8 @@ export default function FormDetails({ formData: initialFormData }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleInputChange = (section, field, value) => {
     setFormData(prev => ({
@@ -24,22 +26,31 @@ export default function FormDetails({ formData: initialFormData }) {
   };
 
   const handleSave = async () => {
+    setIsSubmitting(true);
+    setError(null);
+  
     try {
-      const { _id, ...updateData } = formData; // Remove _id from data being sent
-      const response = await fetch(`/api/forms/${formData._id}`, {
+      const { _id, createdAt, userId, ...updateData } = formData;
+      const response = await fetch(`/api/forms/${_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(updateData),
       });
-
-      if (response.ok) {
-        setIsEditing(false);
-        router.reload();
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Błąd podczas aktualizacji formularza');
       }
+  
+      setIsEditing(false);
+      router.reload();
     } catch (error) {
+      setError(error.message);
       console.error('Błąd podczas zapisywania:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
