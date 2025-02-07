@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from "next-auth/react";
 import { useRouter } from 'next/router';
 
@@ -8,13 +8,28 @@ const VehicleAppraisalForm = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getModelFromYear = (year) => {
+    if (!year) return 'T25';
+    const yearNum = parseInt(year);
+    if (yearNum >= 1966 && yearNum <= 1972) return 'T25';
+    if (yearNum >= 1973 && yearNum <= 1977) return 'T25A';
+    if (yearNum >= 1978 && yearNum <= 1979) return 'T25A1';
+    if (yearNum >= 1980 && yearNum <= 1994) return 'T25A2';
+    if (yearNum >= 1995) return 'T25 LEDA';
+    return 'T25';
+  };
+
   const [formData, setFormData] = useState({
     basicInfo: {
-      brand: '',
-      model: '',
+      brand: 'Władimirec',
+      model: 'T25',
       year: '',
       mileage: '',
       vin: '',
+      isRegistered: false,
+      isInsured: false,
+      hasTechnicalInspection: false,
+      transportDistance: '',
     },
     technicalCondition: {
       engineCondition: '',
@@ -39,25 +54,25 @@ const VehicleAppraisalForm = () => {
   const validateForm = () => {
     let tempErrors = {};
     
-    // Validate basicInfo
-    if (!formData.basicInfo.brand.trim()) {
-      tempErrors.brand = "Marka jest wymagana";
-    }
-    if (!formData.basicInfo.model.trim()) {
-      tempErrors.model = "Model jest wymagany";
-    }
     if (!formData.basicInfo.year) {
       tempErrors.year = "Rok produkcji jest wymagany";
-    } else if (formData.basicInfo.year < 1900 || formData.basicInfo.year > new Date().getFullYear()) {
-      tempErrors.year = "Nieprawidłowy rok produkcji";
+    } else {
+      const year = parseInt(formData.basicInfo.year);
+      if (year < 1965 || year > 2000) {
+        tempErrors.year = "Rok produkcji musi być między 1965 a 2000";
+      }
     }
+    
     if (!formData.basicInfo.mileage) {
       tempErrors.mileage = "Przebieg jest wymagany";
     } else if (formData.basicInfo.mileage < 0) {
       tempErrors.mileage = "Przebieg nie może być ujemny";
     }
 
-    // Validate technicalCondition
+    if (formData.basicInfo.transportDistance && formData.basicInfo.transportDistance < 0) {
+      tempErrors.transportDistance = "Odległość nie może być ujemna";
+    }
+
     if (!formData.technicalCondition.engineCondition) {
       tempErrors.engineCondition = "Wybierz stan silnika";
     }
@@ -70,51 +85,29 @@ const VehicleAppraisalForm = () => {
   };
 
   const handleInputChange = (section, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value
+        }
+      };
+
+      // Update model based on year
+      if (section === 'basicInfo' && field === 'year') {
+        newData.basicInfo.model = getModelFromYear(value);
       }
-    }));
+
+      return newData;
+    });
     
-    // Clear error when field is modified
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
       });
-    }
-  };
-  const handleUpdate = async (formId) => {
-    setIsSubmitting(true);
-    
-    try {
-      const response = await fetch(`/api/forms/${formId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          status: 'updated'
-        }),
-      });
-  
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Błąd podczas aktualizacji formularza');
-      }
-  
-      router.push('/browse-reports?success=form-updated');
-    } catch (error) {
-      setErrors(prev => ({
-        ...prev,
-        submit: error.message
-      }));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -124,32 +117,28 @@ const VehicleAppraisalForm = () => {
     if (!validateForm()) {
       return;
     }
-  
+
     setIsSubmitting(true);
-    const formId = router.query.id;
-  
+
     try {
-      const response = await fetch(
-        formId ? `/api/forms/${formId}` : "/api/forms", 
-        {
-          method: formId ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...formData,
-            userId: session.user.id,
-            type: "vehicle-appraisal",
-            status: formId ? "updated" : "submitted"
-          }),
-        }
-      );
-  
+      const response = await fetch("/api/forms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          userId: session.user.id,
+          type: "wladimerec-appraisal",
+          status: "submitted"
+        }),
+      });
+
       if (response.ok) {
-        router.push("/browse-reports?success=" + (formId ? "form-updated" : "form-submitted"));
+        router.push("/browse-reports?success=form-submitted");
       } else {
         const data = await response.json();
-        throw new Error(data.error || "Błąd podczas " + (formId ? "aktualizacji" : "zapisywania") + " formularza");
+        throw new Error(data.error || "Błąd podczas zapisywania formularza");
       }
     } catch (error) {
       setErrors(prev => ({
@@ -164,7 +153,6 @@ const VehicleAppraisalForm = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Podstawowe informacje o pojeździe</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -174,13 +162,10 @@ const VehicleAppraisalForm = () => {
               </label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  errors.brand ? 'border-red-500' : ''
-                }`}
                 value={formData.basicInfo.brand}
-                onChange={(e) => handleInputChange('basicInfo', 'brand', e.target.value)}
+                disabled
+                className="w-full p-2 border rounded bg-gray-100 text-gray-700"
               />
-              {errors.brand && <p className="text-red-500 text-sm mt-1">{errors.brand}</p>}
             </div>
 
             <div>
@@ -189,13 +174,10 @@ const VehicleAppraisalForm = () => {
               </label>
               <input
                 type="text"
-                className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  errors.model ? 'border-red-500' : ''
-                }`}
                 value={formData.basicInfo.model}
-                onChange={(e) => handleInputChange('basicInfo', 'model', e.target.value)}
+                disabled
+                className="w-full p-2 border rounded bg-gray-100 text-gray-700"
               />
-              {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model}</p>}
             </div>
 
             <div>
@@ -204,6 +186,8 @@ const VehicleAppraisalForm = () => {
               </label>
               <input
                 type="number"
+                min="1965"
+                max="2000"
                 className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
                   errors.year ? 'border-red-500' : ''
                 }`}
@@ -215,7 +199,7 @@ const VehicleAppraisalForm = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Przebieg (km)
+                Przebieg (mth)
               </label>
               <input
                 type="number"
@@ -227,10 +211,66 @@ const VehicleAppraisalForm = () => {
               />
               {errors.mileage && <p className="text-red-500 text-sm mt-1">{errors.mileage}</p>}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Odległość transportu (km)
+              </label>
+              <input
+                type="number"
+                className={`w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
+                  errors.transportDistance ? 'border-red-500' : ''
+                }`}
+                value={formData.basicInfo.transportDistance}
+                onChange={(e) => handleInputChange('basicInfo', 'transportDistance', e.target.value)}
+              />
+              {errors.transportDistance && <p className="text-red-500 text-sm mt-1">{errors.transportDistance}</p>}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isRegistered"
+                checked={formData.basicInfo.isRegistered}
+                onChange={(e) => handleInputChange('basicInfo', 'isRegistered', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isRegistered" className="ml-2 text-sm text-gray-700">
+                Zarejestrowany
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isInsured"
+                checked={formData.basicInfo.isInsured}
+                onChange={(e) => handleInputChange('basicInfo', 'isInsured', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isInsured" className="ml-2 text-sm text-gray-700">
+                Ubezpieczony
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="hasTechnicalInspection"
+                checked={formData.basicInfo.hasTechnicalInspection}
+                onChange={(e) => handleInputChange('basicInfo', 'hasTechnicalInspection', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="hasTechnicalInspection" className="ml-2 text-sm text-gray-700">
+                Aktualny przegląd
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* Technical Condition */}
+        {/* Technical Condition Section */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Stan techniczny</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -273,27 +313,6 @@ const VehicleAppraisalForm = () => {
               </select>
               {errors.transmissionCondition && <p className="text-red-500 text-sm mt-1">{errors.transmissionCondition}</p>}
             </div>
-          </div>
-        </div>
-
-        {/* Additional Features */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Wyposażenie dodatkowe</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(formData.additionalFeatures).map(([feature, value]) => (
-              <div key={feature} className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={feature}
-                  checked={value}
-                  onChange={(e) => handleInputChange('additionalFeatures', feature, e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor={feature} className="ml-2 text-sm text-gray-700">
-                  {feature}
-                </label>
-              </div>
-            ))}
           </div>
         </div>
 

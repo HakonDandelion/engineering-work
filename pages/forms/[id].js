@@ -10,6 +10,22 @@ import 'jspdf-autotable';
 
 export default function FormDetails({ formData: initialFormData }) {
   const router = useRouter();
+  
+  // Sprawdzenie czy mamy dane
+  if (!initialFormData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+        <Header />
+        <Nav />
+        <main className="max-w-6xl mx-auto p-8">
+          <div className="bg-black/20 backdrop-blur-sm p-8 rounded-lg">
+            <p className="text-white">Nie znaleziono formularza.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,7 +35,7 @@ export default function FormDetails({ formData: initialFormData }) {
     setFormData(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...(prev[section] || {}),
         [field]: value
       }
     }));
@@ -57,18 +73,18 @@ export default function FormDetails({ formData: initialFormData }) {
   const generatePDF = () => {
     const doc = new jsPDF();
     
-    // Nagłówek
+    // Nagłówek z zabezpieczeniem
     doc.setFontSize(20);
-    doc.text(`Wycena: ${formData.basicInfo.brand} ${formData.basicInfo.model}`, 14, 20);
+    doc.text(`Wycena: ${formData.basicInfo?.brand || 'Brak marki'} ${formData.basicInfo?.model || ''}`, 14, 20);
     
     // Podstawowe informacje
     doc.setFontSize(14);
     doc.text('Podstawowe informacje', 14, 40);
     const basicInfoData = [
-      ['Marka', formData.basicInfo.brand],
-      ['Model', formData.basicInfo.model],
-      ['Rok produkcji', formData.basicInfo.year],
-      ['Przebieg', `${formData.basicInfo.mileage} km`],
+      ['Marka', formData.basicInfo?.brand || 'Nie podano'],
+      ['Model', formData.basicInfo?.model || 'Nie podano'],
+      ['Rok produkcji', formData.basicInfo?.year || 'Nie podano'],
+      ['Przebieg', formData.basicInfo?.mileage ? `${formData.basicInfo.mileage} km` : 'Nie podano'],
     ];
     doc.autoTable({
       startY: 45,
@@ -79,8 +95,8 @@ export default function FormDetails({ formData: initialFormData }) {
     // Stan techniczny
     doc.text('Stan techniczny', 14, doc.previousAutoTable.finalY + 15);
     const technicalData = [
-      ['Stan silnika', translateCondition(formData.technicalCondition.engineCondition)],
-      ['Stan skrzyni biegów', translateCondition(formData.technicalCondition.transmissionCondition)],
+      ['Stan silnika', translateCondition(formData.technicalCondition?.engineCondition) || 'Nie podano'],
+      ['Stan skrzyni biegów', translateCondition(formData.technicalCondition?.transmissionCondition) || 'Nie podano'],
     ];
     doc.autoTable({
       startY: doc.previousAutoTable.finalY + 20,
@@ -90,7 +106,7 @@ export default function FormDetails({ formData: initialFormData }) {
 
     // Wyposażenie dodatkowe
     doc.text('Wyposażenie dodatkowe', 14, doc.previousAutoTable.finalY + 15);
-    const featuresData = Object.entries(formData.additionalFeatures)
+    const featuresData = Object.entries(formData.additionalFeatures || {})
       .map(([feature, value]) => [translateFeature(feature), value ? 'Tak' : 'Nie']);
     doc.autoTable({
       startY: doc.previousAutoTable.finalY + 20,
@@ -102,7 +118,7 @@ export default function FormDetails({ formData: initialFormData }) {
     doc.setFontSize(10);
     doc.text(`Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}`, 14, doc.previousAutoTable.finalY + 15);
 
-    doc.save(`wycena_${formData.basicInfo.brand}_${formData.basicInfo.model}.pdf`);
+    doc.save(`wycena_${formData.basicInfo?.brand || 'pojazd'}_${formData.basicInfo?.model || ''}.pdf`);
   };
 
   const InputField = ({ label, value, onChange, type = "text" }) => (
@@ -110,7 +126,7 @@ export default function FormDetails({ formData: initialFormData }) {
       <label className="block text-gray-300 text-sm font-medium mb-2">{label}</label>
       <input
         type={type}
-        value={value}
+        value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full p-2 bg-black/20 border border-gray-600 rounded text-white"
       />
@@ -121,10 +137,11 @@ export default function FormDetails({ formData: initialFormData }) {
     <div className="mb-4">
       <label className="block text-gray-300 text-sm font-medium mb-2">{label}</label>
       <select
-        value={value}
+        value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full p-2 bg-black/20 border border-gray-600 rounded text-white"
       >
+        <option value="">Wybierz...</option>
         {options.map(option => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -143,7 +160,7 @@ export default function FormDetails({ formData: initialFormData }) {
         <div className="bg-black/20 backdrop-blur-sm p-8 rounded-lg mb-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-700">
-              {formData.basicInfo.brand} {formData.basicInfo.model}
+              {formData.basicInfo?.brand || 'Brak nazwy'} {formData.basicInfo?.model || ''}
             </h1>
             <div className="space-x-4">
               <button
@@ -161,9 +178,10 @@ export default function FormDetails({ formData: initialFormData }) {
               {isEditing && (
                 <button
                   onClick={handleSave}
+                  disabled={isSubmitting}
                   className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                 >
-                  Zapisz zmiany
+                  {isSubmitting ? 'Zapisywanie...' : 'Zapisz zmiany'}
                 </button>
               )}
               <button
@@ -175,6 +193,12 @@ export default function FormDetails({ formData: initialFormData }) {
             </div>
           </div>
 
+          {error && (
+            <div className="mb-4 p-4 bg-red-500/20 border border-red-500 rounded text-red-100">
+              {error}
+            </div>
+          )}
+
           {isEditing ? (
             <div className="space-y-6">
               {/* Basic Info */}
@@ -183,23 +207,23 @@ export default function FormDetails({ formData: initialFormData }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField
                     label="Marka"
-                    value={formData.basicInfo.brand}
+                    value={formData.basicInfo?.brand || ''}
                     onChange={(value) => handleInputChange('basicInfo', 'brand', value)}
                   />
                   <InputField
                     label="Model"
-                    value={formData.basicInfo.model}
+                    value={formData.basicInfo?.model || ''}
                     onChange={(value) => handleInputChange('basicInfo', 'model', value)}
                   />
                   <InputField
                     label="Rok produkcji"
-                    value={formData.basicInfo.year}
+                    value={formData.basicInfo?.year || ''}
                     onChange={(value) => handleInputChange('basicInfo', 'year', value)}
                     type="number"
                   />
                   <InputField
                     label="Przebieg (km)"
-                    value={formData.basicInfo.mileage}
+                    value={formData.basicInfo?.mileage || ''}
                     onChange={(value) => handleInputChange('basicInfo', 'mileage', value)}
                     type="number"
                   />
@@ -212,7 +236,7 @@ export default function FormDetails({ formData: initialFormData }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <SelectField
                     label="Stan silnika"
-                    value={formData.technicalCondition.engineCondition}
+                    value={formData.technicalCondition?.engineCondition || ''}
                     onChange={(value) => handleInputChange('technicalCondition', 'engineCondition', value)}
                     options={[
                       { value: 'excellent', label: 'Bardzo dobry' },
@@ -223,7 +247,7 @@ export default function FormDetails({ formData: initialFormData }) {
                   />
                   <SelectField
                     label="Stan skrzyni biegów"
-                    value={formData.technicalCondition.transmissionCondition}
+                    value={formData.technicalCondition?.transmissionCondition || ''}
                     onChange={(value) => handleInputChange('technicalCondition', 'transmissionCondition', value)}
                     options={[
                       { value: 'excellent', label: 'Bardzo dobry' },
@@ -239,12 +263,12 @@ export default function FormDetails({ formData: initialFormData }) {
               <div className="bg-black/30 p-6 rounded-lg">
                 <h2 className="text-2xl font-semibold text-white mb-4">Wyposażenie dodatkowe</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Object.entries(formData.additionalFeatures).map(([feature, value]) => (
+                  {Object.entries(formData.additionalFeatures || {}).map(([feature, value]) => (
                     <div key={feature} className="flex items-center">
                       <input
                         type="checkbox"
                         id={feature}
-                        checked={value}
+                        checked={value || false}
                         onChange={(e) => handleInputChange('additionalFeatures', feature, e.target.checked)}
                         className="mr-2"
                       />
@@ -257,7 +281,6 @@ export default function FormDetails({ formData: initialFormData }) {
               </div>
             </div>
           ) : (
-            // Existing view mode...
             <>
               <div className="text-gray-300 mb-4">
                 Utworzono: {formatDate(formData.createdAt)}
@@ -266,10 +289,10 @@ export default function FormDetails({ formData: initialFormData }) {
               <div className="bg-black/30 p-6 rounded-lg mb-6">
                 <h2 className="text-2xl font-semibold text-white mb-4">Podstawowe informacje</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
-                  <div><span className="font-medium">Marka:</span> {formData.basicInfo.brand}</div>
-                  <div><span className="font-medium">Model:</span> {formData.basicInfo.model}</div>
-                  <div><span className="font-medium">Rok produkcji:</span> {formData.basicInfo.year}</div>
-                  <div><span className="font-medium">Przebieg:</span> {formData.basicInfo.mileage} km</div>
+                  <div><span className="font-medium">Marka:</span> {formData.basicInfo?.brand || 'Nie podano'}</div>
+                  <div><span className="font-medium">Model:</span> {formData.basicInfo?.model || 'Nie podano'}</div>
+                  <div><span className="font-medium">Rok produkcji:</span> {formData.basicInfo?.year || 'Nie podano'}</div>
+                  <div><span className="font-medium">Przebieg:</span> {formData.basicInfo?.mileage ? `${formData.basicInfo.mileage} km` : 'Nie podano'}</div>
                 </div>
               </div>
 
@@ -277,10 +300,10 @@ export default function FormDetails({ formData: initialFormData }) {
                 <h2 className="text-2xl font-semibold text-white mb-4">Stan techniczny</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
                   <div>
-                    <span className="font-medium">Stan silnika:</span> {translateCondition(formData.technicalCondition.engineCondition)}
+                    <span className="font-medium">Stan silnika:</span> {translateCondition(formData.technicalCondition?.engineCondition) || 'Nie podano'}
                   </div>
                   <div>
-                    <span className="font-medium">Stan skrzyni biegów:</span> {translateCondition(formData.technicalCondition.transmissionCondition)}
+                    <span className="font-medium">Stan skrzyni biegów:</span> {translateCondition(formData.technicalCondition?.transmissionCondition) || 'Nie podano'}
                   </div>
                 </div>
               </div>
@@ -288,7 +311,7 @@ export default function FormDetails({ formData: initialFormData }) {
               <div className="bg-black/30 p-6 rounded-lg">
                 <h2 className="text-2xl font-semibold text-white mb-4">Wyposażenie dodatkowe</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-gray-300">
-                  {Object.entries(formData.additionalFeatures).map(([feature, value]) => (
+                  {Object.entries(formData.additionalFeatures || {}).map(([feature, value]) => (
                     <div key={feature} className="flex items-center">
                       <span className={`mr-2 ${value ? 'text-green-500' : 'text-red-500'}`}>
                         {value ? '✓' : '✗'}

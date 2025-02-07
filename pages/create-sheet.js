@@ -35,7 +35,10 @@ export default function CreateTemplate() {
     { value: "date", label: "Data" },
     { value: "textarea", label: "Długi tekst" }
   ];
-
+  const generateId = (prefix = 'field') => {
+    return `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+  
   const addField = () => {
     const newId = generateId();
     setTemplateData(prev => ({

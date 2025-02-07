@@ -101,25 +101,26 @@ export default function Dashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {forms.map((form) => (
-                  <div key={form._id} className="bg-black/30 p-6 rounded-lg hover:bg-black/40 transition-all">
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                      {form.basicInfo.brand} {form.basicInfo.model}
-                    </h3>
-                    <p className="text-gray-300 text-sm mb-4">
-                      Utworzono: {formatDate(form.createdAt)}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className={getStatusColor(form.status)}>
-                        {getStatusText(form.status)}
-                      </span>
-                      <button 
-                        onClick={() => router.push(`/forms/${form._id}`)}
-                        className="text-blue-400 hover:text-blue-300"
-                      >
-                        Szczegóły →
-                      </button>
-                    </div>
+                <div key={form._id} className="bg-black/30 p-6 rounded-lg hover:bg-black/40 transition-all">
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    {/* Dodajemy sprawdzenie czy basicInfo i jego pola istnieją */}
+                    {form.basicInfo?.brand ? `${form.basicInfo.brand} ${form.basicInfo.model || ''}` : 'Formularz niestandardowy'}
+                  </h3>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Utworzono: {formatDate(form.createdAt)}
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <span className={getStatusColor(form.status)}>
+                      {getStatusText(form.status)}
+                    </span>
+                    <button 
+                      onClick={() => router.push(`/forms/${form._id}`)}
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      Szczegóły →
+                    </button>
                   </div>
+                </div>
                 ))}
 
                 {/* Przycisk dodawania nowego formularza */}

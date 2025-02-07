@@ -50,18 +50,24 @@ export default function SelectSheet() {
     fetchTemplates();
   }, []);
 
-  // Funkcja obsługująca przejście do wybranego formularza
+  // Dodana funkcja do obsługi tworzenia nowego szablonu
+  const handleCreateTemplate = () => {
+    router.push('/create-sheet');
+  };
+
+  // Poprawiona funkcja wyboru szablonu
   const handleFormSelection = () => {
     if (!selectedSheet) return;
     
-    const selectedTemplate = templates.find(template => template.id === selectedSheet);
+    const selectedTemplate = templates.find(template => 
+      template.type === 'built-in' ? 
+      template.id === selectedSheet : 
+      template._id === selectedSheet
+    );
+    
     if (selectedTemplate) {
       router.push(selectedTemplate.path);
     }
-  };
-
-  const handleCreateTemplate = () => {
-    router.push('/create-template');
   };
 
   return (
